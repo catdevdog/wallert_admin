@@ -24,4 +24,14 @@ export default defineNuxtConfig({
   },
 
   compatibilityDate: "2025-01-03",
+  runtimeConfig: {
+    dbHost: process.env.DB_HOST,
+    dbPort: process.env.DB_PORT,
+    dbUser: process.env.DB_USER,
+    dbPassword: process.env.DB_PASSWORD,
+    dbName: process.env.DB_NAME,
+    public: {
+      apiBase: "/api", // 클라이언트에서 접근 가능한 설정
+    },
+  },
 });
