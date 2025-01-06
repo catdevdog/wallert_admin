@@ -31,6 +31,7 @@ export default defineNuxtConfig({
     dbPassword: process.env.DB_PASSWORD,
     dbName: process.env.DB_NAME,
     public: {
+      imagePath: process.env.IMAGE_PATH,
       apiBase: "/api", // 클라이언트에서 접근 가능한 설정
     },
   },

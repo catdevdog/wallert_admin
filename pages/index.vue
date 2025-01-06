@@ -238,9 +238,9 @@ onMounted(() => {
           :headers="headers"
           :loading="loading"
           :mobile-breakpoint="0"
-          :items-per-page="10"
+          :items-per-page="31"
           :footer-props="{
-            'items-per-page-options': [10, 20, 50],
+            'items-per-page-options': [31, 60, 120],
             showFirstLastPage: true,
           }"
         >

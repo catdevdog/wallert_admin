@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="dialog" max-width="500px" persistent>
+  <v-dialog v-model="dialog" max-width="600px" persistent>
     <v-card>
       <v-toolbar :color="editMode ? 'primary' : 'success'" class="text-white">
         <v-toolbar-title>
@@ -22,24 +22,66 @@
             item-value="value"
             :rules="[(v) => !!v || '브랜드를 선택해주세요']"
             :loading="loading"
-            :disabled="loading"
+            :disabled="loading || editMode"
+            @update:model-value="handleBrandChange"
           ></v-select>
 
-          <v-text-field
-            v-model="form.wall_name"
-            label="벽 이름*"
-            :rules="[(v) => !!v || '벽 이름을 입력해주세요']"
-            :disabled="loading"
-          ></v-text-field>
+          <!-- 벽 선택 -->
+          <div v-if="form.brand_name">
+            <label class="text-subtitle-1 font-weight-medium d-block mb-2"
+              >벽 선택*</label
+            >
+            <div
+              v-if="availableWalls.length === 0"
+              class="text-body-2 text-grey mb-4"
+            >
+              등록된 벽이 없습니다.
+            </div>
+            <v-btn-toggle
+              v-else
+              v-model="form.wall_name"
+              mandatory
+              class="mb-4 h-auto gap-2"
+              :rules="[(v) => !!v || '벽을 선택해주세요']"
+            >
+              <v-btn
+                v-for="wall in availableWalls"
+                :key="wall"
+                :value="wall"
+                :color="form.wall_name === wall ? 'primary' : undefined"
+                class="py-3 border text-body-1"
+                size="small"
+              >
+                {{ wall }}
+              </v-btn>
+            </v-btn-toggle>
+          </div>
 
-          <v-select
-            v-model="form.type"
-            :items="['SETTING', 'REMOVAL', 'EVENT']"
-            label="일정 유형*"
-            :rules="[(v) => !!v || '일정 유형을 선택해주세요']"
-            :disabled="loading"
-          ></v-select>
+          <!-- 일정 타입 선택 -->
+          <div>
+            <label class="text-subtitle-1 font-weight-medium d-block mb-2"
+              >일정 타입*</label
+            >
+            <v-btn-toggle
+              v-model="form.type"
+              mandatory
+              class="mb-4 d-flex flex-wrap gap-2"
+              :rules="[(v) => !!v || '일정 타입을 선택해주세요']"
+            >
+              <v-btn
+                v-for="type in scheduleTypes"
+                :key="type.value"
+                :value="type.value"
+                :color="getTypeColor(type.value)"
+                class="flex-grow-1 border text-body-1"
+              >
+                <v-icon :icon="type.icon" class="mr-1" />
+                {{ type.title }}
+              </v-btn>
+            </v-btn-toggle>
+          </div>
 
+          <!-- 날짜 선택 -->
           <v-row>
             <v-col cols="12" sm="4">
               <v-select
@@ -67,7 +109,7 @@
                 :rules="[(v) => !!v || '일을 입력해주세요']"
                 :disabled="loading"
                 min="1"
-                :max="31"
+                :max="getDaysInMonth(form.year, form.month)"
               ></v-text-field>
             </v-col>
           </v-row>
@@ -91,7 +133,7 @@
             color="primary"
             type="submit"
             :loading="loading"
-            :disabled="!isFormValid"
+            :disabled="!isFormValid || !form.wall_name"
           >
             {{ editMode ? "수정" : "저장" }}
           </v-btn>
@@ -129,6 +171,15 @@ const emit = defineEmits(["update:modelValue", "save"]);
 const dialog = ref(false);
 const formRef = ref(null);
 const isFormValid = ref(false);
+const availableWalls = ref([]);
+const localLoading = ref(false);
+
+const scheduleTypes = [
+  { title: "셋팅", value: "SETTING", icon: "mdi-wrench" },
+  { title: "철거", value: "REMOVAL", icon: "mdi-delete" },
+  { title: "이벤트", value: "EVENT", icon: "mdi-calendar-star" },
+  { title: "휴무일", value: "CLOSED", icon: "mdi-power-sleep" },
+];
 
 const form = ref({
   brand_name: "",
@@ -141,105 +192,137 @@ const form = ref({
   description: "",
 });
 
-// 년도 배열 생성 (현재 년도 포함 3년)
 const years = Array.from({ length: 3 }, (_, i) => new Date().getFullYear() + i);
 
-// 월 배열 생성 (1-12)
 const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
-// 모달 표시 상태 감시
+function getDaysInMonth(year, month) {
+  return new Date(year, month, 0).getDate();
+}
+
+function getTypeColor(type) {
+  switch (type) {
+    case "SETTING":
+      return "success";
+    case "REMOVAL":
+      return "error";
+    case "EVENT":
+      return "info";
+    case "CLOSED":
+      return "grey";
+    default:
+      return undefined;
+  }
+}
+
+async function handleBrandChange(brandName) {
+  form.value.wall_name = "";
+  availableWalls.value = [];
+
+  if (!brandName) return;
+
+  try {
+    localLoading.value = true;
+    const response = await $fetch(`/api/brands_info?name=${brandName}`);
+    const selectedBrand = props.brands.find((b) => b.value === brandName);
+
+    if (selectedBrand) {
+      form.value.name_kr = selectedBrand.title;
+    }
+
+    availableWalls.value = response.wall_names || [];
+  } catch (error) {
+    console.error("Failed to fetch walls:", error);
+  } finally {
+    localLoading.value = false;
+  }
+}
+
 watch(
   () => props.modelValue,
   (newValue) => {
     dialog.value = newValue;
     if (newValue) {
-      // 모달이 열릴 때 폼 초기화
       initializeForm();
     }
   }
 );
 
-// editData 감시
 watch(
   () => props.editData,
   (newValue) => {
     if (props.editMode && newValue) {
-      // 수정 모드이고 데이터가 있을 때 폼 업데이트
-      form.value = { ...newValue };
+      const date = new Date(newValue.date);
+      form.value = {
+        ...newValue,
+        year: date.getFullYear(),
+        month: date.getMonth() + 1,
+        day: date.getDate(),
+      };
+      handleBrandChange(newValue.brand_name);
     }
   },
   { deep: true }
 );
 
-// brand_name이 변경될 때 name_kr 업데이트
-watch(
-  () => form.value.brand_name,
-  (newValue) => {
-    if (newValue) {
-      const selectedBrand = props.brands.find(
-        (brand) => brand.value === newValue
-      );
-      if (selectedBrand) {
-        form.value.name_kr = selectedBrand.title;
-      }
-    }
-  }
-);
-
 function initializeForm() {
   if (props.editMode && props.editData) {
-    // 수정 모드일 때
-    form.value = { ...props.editData };
-  } else {
-    // 새로 추가할 때
+    // 기존 날짜 파싱
+    const date = new Date(props.editData.date);
     form.value = {
-      brand_name: "",
-      name_kr: "",
-      wall_name: "",
-      type: "",
-      year: new Date().getFullYear(),
-      month: new Date().getMonth() + 1,
-      day: new Date().getDate(),
-      description: "",
+      ...props.editData,
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      day: date.getDate(),
     };
+    handleBrandChange(props.editData.brand_name);
+  } else {
+    // ...기존 코드
   }
 }
 
 async function handleSave() {
   const isValid = await formRef.value?.validate();
 
-  if (!isValid) {
+  if (!isValid || !form.value.wall_name) {
     return;
   }
 
-  // 저장할 데이터 구성
-  const saveData = {
-    ...form.value,
-    id: props.editMode ? props.editData.id : undefined, // 수정 시 ID 포함
-    date: `${form.value.year}-${String(form.value.month).padStart(
-      2,
-      "0"
-    )}-${String(form.value.day).padStart(2, "0")}`,
-  };
+  // 날짜 포맷팅
+  const formattedDate = `${form.value.year}-${String(form.value.month).padStart(
+    2,
+    "0"
+  )}-${String(form.value.day).padStart(2, "0")}`;
 
-  emit("save", saveData);
+  emit("save", {
+    ...form.value,
+    date: formattedDate, // date 필드 추가
+  });
 }
 
 function closeModal() {
-  dialog.value = false;
+  formRef.value?.reset();
+  availableWalls.value = [];
   emit("update:modelValue", false);
 }
 </script>
 
 <style scoped>
-.v-card-text {
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
+.gap-2 {
+  gap: 8px;
+}
+
+.wall-selection {
+  margin-bottom: 20px;
+}
+
+.v-btn-toggle {
+  flex-wrap: wrap;
 }
 
 @media (max-width: 600px) {
-  .v-card-text {
-    max-height: calc(100vh - 120px);
+  .v-btn-toggle .v-btn {
+    flex: 1 1 calc(50% - 4px);
   }
 }
 </style>
