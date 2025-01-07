@@ -20,6 +20,7 @@
           :key="type"
           :color="getEventColor({ type })"
           size="small"
+          label
           class="mr-2"
         >
           {{ getEventTypeLabel(type) }}
@@ -66,7 +67,12 @@
                 }"
               >
                 <div class="date-number">
-                  {{ new Date(day.date).getDate() }}
+                  <v-btn
+                    variant="text"
+                    @click="openAddDialog({ date: day.date }, false)"
+                  >
+                    {{ new Date(day.date).getDate() }}
+                  </v-btn>
                 </div>
                 <div class="events-container">
                   <v-chip
@@ -74,14 +80,15 @@
                     :key="event.id"
                     :color="getEventColor(event)"
                     size="small"
-                    class="mb-1 event-chip"
+                    class="mb-1 event-chip px-0 py-1"
+                    label
                     @click="showEvent(event)"
                   >
                     <div class="event-content">
-                      <div class="text-caption font-weight-bold">
+                      <p class="font-weight-bold text-body-4">
                         {{ event.name_kr }}
-                      </div>
-                      <div class="text-caption">{{ event.wall_name }}</div>
+                      </p>
+                      <p>[ {{ event.wall_name }} ]</p>
                     </div>
                   </v-chip>
                 </div>
@@ -153,7 +160,7 @@
     <schedule-form
       v-model="formDialog"
       :brands="brands"
-      :editMode="!!selectedEvent"
+      :editMode="editMode"
       :editData="selectedEvent"
       :loading="loading"
       @save="handleSave"
@@ -183,6 +190,7 @@ const formDialog = ref(false);
 const selectedEvent = ref(null);
 const schedules = ref([]);
 const brands = ref([]);
+const editMode = ref(false);
 
 // 스낵바 상태
 const snackbar = ref({
@@ -312,9 +320,9 @@ function getEventColor(event) {
 function getEventTypeLabel(type) {
   switch (type) {
     case "SETTING":
-      return "셋팅";
+      return "세팅";
     case "REMOVAL":
-      return "철거";
+      return "탈거";
     case "EVENT":
       return "이벤트";
     case "CLOSED":
@@ -360,8 +368,15 @@ function showEvent(event) {
   eventDialog.value = true;
 }
 
-function openAddDialog() {
+function openAddDialog(date = null, edit = false) {
   selectedEvent.value = null;
+  if (date && date.date) {
+    selectedEvent.value = {
+      date: date.date,
+    };
+  }
+
+  editMode.value = edit;
   formDialog.value = true;
 }
 
@@ -560,6 +575,10 @@ onMounted(() => {
   white-space: normal;
   word-break: break-word;
   line-height: 1.2;
+  display: flex;
+  gap: 4px;
+  justify-content: space-between;
+  flex-wrap: wrap;
 }
 
 /* 스크롤바 스타일링 */
