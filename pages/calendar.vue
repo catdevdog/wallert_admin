@@ -85,10 +85,10 @@
                     @click="showEvent(event)"
                   >
                     <div class="event-content">
-                      <p class="font-weight-bold text-body-4">
+                      <p>
                         {{ event.name_kr }}
                       </p>
-                      <p>[ {{ event.wall_name }} ]</p>
+                      <p class="font-weight-bold">- {{ event.wall_name }}</p>
                     </div>
                   </v-chip>
                 </div>
@@ -549,7 +549,7 @@ onMounted(() => {
 }
 
 .outside-month {
-  background: rgb(var(--v-theme-on-surface-variant));
+  background: rgb(var(--v-theme-on-surface-variant), 0.5);
   .date-number {
     color: rgba(var(--v-theme-on-surface), 0.38);
   }

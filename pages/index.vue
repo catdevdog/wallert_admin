@@ -16,15 +16,16 @@
       >
         <v-card class="brand-card">
           <v-card-item>
-            <v-card-title class="mb-2">{{ brand.name_kr }}</v-card-title>
+            <v-card-title class="mb-2">
+              {{ brand.name_kr }}
+            </v-card-title>
             <template v-if="brand.next_setting">
               <v-card-subtitle class="d-flex align-center font-weight-bold">
                 <v-icon
                   size="default"
                   :color="getDDayColor(brand.next_setting?.date)"
                   icon="mdi-wall mr-2"
-                />
-                {{ brand.next_setting.wall_name }}
+                />{{ brand.next_setting.wall_name }}
               </v-card-subtitle>
             </template>
           </v-card-item>
