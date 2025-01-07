@@ -164,6 +164,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  addDate: {
+    type: String,
+    default: "",
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "save"]);
@@ -263,6 +267,17 @@ watch(
     }
   },
   { deep: true }
+);
+
+watch(
+  () => props.addDate,
+  (newValue) => {
+    if (newValue) {
+      form.value.year = new Date(newValue).getFullYear();
+      form.value.month = new Date(newValue).getMonth() + 1;
+      form.value.day = new Date(newValue).getDate();
+    }
+  }
 );
 
 function initializeForm() {

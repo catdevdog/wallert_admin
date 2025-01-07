@@ -146,7 +146,11 @@
 
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="primary" variant="text" @click="editEvent">
+          <v-btn
+            color="primary"
+            variant="text"
+            @click="editEvent(selectedEvent)"
+          >
             수정
           </v-btn>
           <v-btn color="error" variant="text" @click="deleteEvent">
@@ -160,8 +164,9 @@
     <schedule-form
       v-model="formDialog"
       :brands="brands"
-      :editMode="editMode"
-      :editData="selectedEvent"
+      :edit-mode="editMode"
+      :edit-data="selectedEvent"
+      :add-date="addDate"
       :loading="loading"
       @save="handleSave"
     />
@@ -191,6 +196,7 @@ const selectedEvent = ref(null);
 const schedules = ref([]);
 const brands = ref([]);
 const editMode = ref(false);
+const addDate = ref(null);
 
 // 스낵바 상태
 const snackbar = ref({
@@ -201,12 +207,18 @@ const snackbar = ref({
 
 // 시간대 관련 유틸리티 함수
 function getKoreanDate(date) {
-  return new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  // 입력된 date를 'Asia/Seoul' 시간대 기준으로 변환
+  return new Date(
+    new Date(date).toLocaleString("en-US", { timeZone: "Asia/Seoul" })
+  );
 }
 
 function getLocalISOString(date) {
   const koreanDate = getKoreanDate(date);
-  return koreanDate.toISOString().split("T")[0];
+  const year = koreanDate.getFullYear();
+  const month = String(koreanDate.getMonth() + 1).padStart(2, "0");
+  const day = String(koreanDate.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 // 현재 월 제목
@@ -223,8 +235,8 @@ const calendarDays = computed(() => {
   const koreanDate = getKoreanDate(currentDate.value);
   const year = koreanDate.getFullYear();
   const month = koreanDate.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
+  const firstDay = getKoreanDate(new Date(year, month, 1));
+  const lastDay = getKoreanDate(new Date(year, month + 1, 0));
 
   // 이전 달의 마지막 날짜들
   const prevMonthDays = [];
@@ -248,6 +260,9 @@ const calendarDays = computed(() => {
   const currentMonthDays = [];
   for (let i = 1; i <= lastDay.getDate(); i++) {
     const date = new Date(year, month, i);
+
+    if (isSameDate(date, new Date())) console.log(date);
+
     currentMonthDays.push({
       date: getLocalISOString(date),
       isCurrentMonth: true,
@@ -285,8 +300,9 @@ const calendarDays = computed(() => {
 
 // 유틸리티 함수들
 function isSameDate(date1, date2) {
-  const d1 = getKoreanDate(new Date(date1));
-  const d2 = getKoreanDate(new Date(date2));
+  const d1 = getKoreanDate(date1);
+  const d2 = getKoreanDate(date2);
+
   return (
     d1.getFullYear() === d2.getFullYear() &&
     d1.getMonth() === d2.getMonth() &&
@@ -333,8 +349,7 @@ function getEventTypeLabel(type) {
 }
 
 function formatDate(dateStr) {
-  const date = new Date(dateStr);
-  const koreanDate = getKoreanDate(date);
+  const koreanDate = getKoreanDate(new Date(dateStr));
   return koreanDate.toLocaleDateString("ko-KR", {
     year: "numeric",
     month: "long",
@@ -370,17 +385,17 @@ function showEvent(event) {
 
 function openAddDialog(date = null, edit = false) {
   selectedEvent.value = null;
-  if (date && date.date) {
-    selectedEvent.value = {
-      date: date.date,
-    };
+  editMode.value = edit;
+
+  if (date.date) {
+    addDate.value = date.date;
   }
 
-  editMode.value = edit;
   formDialog.value = true;
 }
 
 function editEvent() {
+  editMode.value = true;
   eventDialog.value = false;
   formDialog.value = true;
 }
@@ -407,7 +422,7 @@ async function deleteEvent() {
 async function handleSave(scheduleData) {
   try {
     loading.value = true;
-    if (selectedEvent.value) {
+    if (selectedEvent.value && selectedEvent.value.id) {
       // 수정
       await $fetch("/api/schedules", {
         method: "PUT",
