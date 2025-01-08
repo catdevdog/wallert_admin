@@ -15,7 +15,7 @@ const headers = [
   // { title: "브랜드명", value: "brand", sortable: true },
   { title: "인스타", value: "name", sortable: true },
   { title: "벽", value: "wall_names", sortable: false },
-  // { title: "프로필", value: "profile_image", sortable: false },
+  { title: "프로필", value: "profile_image", sortable: false },
   // { title: "생성일", value: "created_at", sortable: true },
   {
     title: "Actions",

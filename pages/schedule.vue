@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useDisplay } from "vuetify";
-import ScheduleForm from "@/components/ScheduleForm.vue";
+import ScheduleForm from "~/components/ScheduleForm.vue";
 
 // 상태 관리
 const dialog = ref(false);

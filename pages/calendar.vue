@@ -32,6 +32,13 @@
         >
           일정 추가
         </v-btn>
+        <v-btn
+          prepend-icon="mdi-repeat"
+          @click="openRepeatDialog"
+          :loading="loading"
+        >
+          반복 일정
+        </v-btn>
       </v-toolbar>
 
       <!-- 달력 그리드 -->
@@ -160,6 +167,14 @@
       </v-card>
     </v-dialog>
 
+    <!-- 다이얼로그 추가 -->
+    <schedule-repeat-form
+      v-model="repeatFormDialog"
+      :brands="brands"
+      :loading="loading"
+      @create="createRepeatSchedules"
+    />
+
     <!-- 일정 추가/수정 다이얼로그 -->
     <schedule-form
       v-model="formDialog"
@@ -185,7 +200,8 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import ScheduleForm from "@/components/ScheduleForm.vue";
+import ScheduleForm from "~/components/ScheduleForm.vue";
+import ScheduleRepeatForm from "@/components/ScheduleRepeatForm.vue";
 
 // 상태 관리
 const loading = ref(false);
@@ -484,6 +500,68 @@ function showSnackbar(text, color = "success") {
     text,
     color,
   };
+} // 상태 추가
+const repeatFormDialog = ref(false);
+
+// 함수 추가
+function openRepeatDialog() {
+  repeatFormDialog.value = true;
+}
+
+async function createRepeatSchedules(repeatData) {
+  try {
+    loading.value = true;
+    let currentDate = new Date(repeatData.startDate);
+
+    // 반복 횟수만큼 일정 생성
+    for (let cycle = 0; cycle < repeatData.repeatCount; cycle++) {
+      // 일정 생성
+      await $fetch("/api/schedules", {
+        method: "POST",
+        body: {
+          brand_name: repeatData.brand_name,
+          name_kr: repeatData.name_kr,
+          wall_name: repeatData.wall_name,
+          type: repeatData.type,
+          date: getLocalISOString(currentDate),
+          description: repeatData.description || null,
+        },
+      });
+
+      // 다음 날짜 계산
+      if (repeatData.repeatType === "days") {
+        currentDate.setDate(
+          currentDate.getDate() + Number(repeatData.repeatValue)
+        );
+      } else {
+        currentDate = getNextSelectedWeekday(
+          currentDate,
+          repeatData.selectedWeekdays
+        );
+      }
+    }
+
+    showSnackbar("반복 일정이 생성되었습니다.");
+    await fetchSchedules();
+    repeatFormDialog.value = false;
+  } catch (error) {
+    console.error("Error creating schedules:", error);
+    showSnackbar("일정 생성에 실패했습니다.", "error");
+  } finally {
+    loading.value = false;
+  }
+}
+
+function getNextSelectedWeekday(currentDate, selectedWeekdays) {
+  const nextDate = new Date(currentDate);
+  let found = false;
+  while (!found) {
+    nextDate.setDate(nextDate.getDate() + 1);
+    if (selectedWeekdays.includes(nextDate.getDay())) {
+      found = true;
+    }
+  }
+  return nextDate;
 }
 
 // 초기 데이터 로드
