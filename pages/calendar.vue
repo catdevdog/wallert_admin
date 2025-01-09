@@ -6,7 +6,7 @@
           <v-icon>mdi-chevron-left</v-icon>
         </v-btn>
 
-        <v-toolbar-title class="text-center">
+        <v-toolbar-title class="text-center calendar-title">
           {{ currentMonthTitle }}
         </v-toolbar-title>
 
@@ -571,6 +571,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.calendar-title {
+  flex: 0 0 auto;
+}
+
 .calendar-grid {
   width: 100%;
 }

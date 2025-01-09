@@ -48,12 +48,12 @@
               <div class="text-h6 text-medium-emphasis">예정된 세팅 없음</div>
             </template>
 
-            <!-- 벽면별 평균 주기 -->
+            <!-- 평균 세팅 주기 -->
             <v-expand-transition>
               <div v-if="Object.keys(brand.walls).length > 0" class="mt-4">
                 <v-divider class="mb-2" />
                 <div class="text-caption text-medium-emphasis mb-2">
-                  벽면별 평균 주기
+                  평균 세팅 주기
                 </div>
                 <div
                   v-for="(data, wall) in brand.walls"
