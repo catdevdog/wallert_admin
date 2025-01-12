@@ -16,31 +16,37 @@
       >
         <v-card class="brand-card">
           <v-card-item>
-            <v-card-title class="mb-2">
-              {{ brand.name_kr }}
+            <v-card-title class="d-flex justify-space-between">
+              <p>
+                {{ brand.name_kr }}
+              </p>
+              <p :class="`text-${getDDayColor(brand.next_setting.date)} font-weight-bold`">
+                {{ getDDay(brand.next_setting.date) }}
+              </p>
             </v-card-title>
             <template v-if="brand.next_setting">
-              <v-card-subtitle class="d-flex align-center font-weight-bold">
-                <v-icon
+              <v-card-subtitle class="d-flex align-center font-weight-bold position-absolute">
+                <!-- <v-icon
                   size="default"
                   :color="getDDayColor(brand.next_setting?.date)"
                   icon="mdi-wall mr-2"
-                />{{ brand.next_setting.wall_name }}
+                /> -->
+                {{ brand.next_setting.wall_name }}
               </v-card-subtitle>
             </template>
           </v-card-item>
 
-          <v-card-text class="text-center">
+          <v-card-text >
             <template v-if="brand.next_setting">
-              <div class="d-flex flex-column align-center">
-                <div
-                  class="text-h4 font-weight-bold mb-2"
-                  :class="`text-${getDDayColor(brand.next_setting.date)}`"
-                >
-                  {{ getDDay(brand.next_setting.date) }}
-                </div>
-                <div class="text-body-2">
-                  {{ formatDate(brand.next_setting.date) }}
+              <div class="d-flex flex-column align-center position-relative">
+                <img
+                  class="brand-wall-image"
+                  :src="getWallImage(brand,brand.next_setting.wall_name)"
+                />
+                <div class=" position-absolute bottom-0 right-0">
+                  <div class="text-body-2 text-right w-100">
+                    {{ formatDate(brand.next_setting.date) }}
+                  </div>
                 </div>
               </div>
             </template>
@@ -86,6 +92,8 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { VImg } from "vuetify/components";
+const config = useRuntimeConfig();
 
 const loading = ref(false);
 const brands = ref([]);
@@ -164,6 +172,12 @@ function showSnackbar(text, color = "success") {
   };
 }
 
+// 벽 이미지 가져오기
+function getWallImage(brand,wallName) {
+  console.log(brand,wallName);
+  return `${config.public.imagePath}/${brand.brand_name}/wall/${wallName}.png`;
+}
+
 onMounted(() => {
   fetchData();
 });
@@ -174,5 +188,10 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+.brand-wall-image {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
 }
 </style>
