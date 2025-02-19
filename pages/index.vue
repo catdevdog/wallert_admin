@@ -40,6 +40,7 @@
             <template v-if="brand.next_setting">
               <div class="d-flex flex-column align-center position-relative">
                 <img
+                  alt="벽 위치 이미지"
                   class="brand-wall-image"
                   :src="getWallImage(brand,brand.next_setting.wall_name)"
                 />
