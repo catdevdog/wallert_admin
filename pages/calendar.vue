@@ -3,65 +3,53 @@
     <v-card>
       <!-- 캘린더 헤더 - 고정 표시 -->
       <v-toolbar density="compact">
-        <div class="d-flex align-center justify-center w-100">
-          <v-btn icon @click="previousMonth" density="comfortable">
-            <v-icon>mdi-chevron-left</v-icon>
-          </v-btn>
+        <div class="d-flex align-center justify-space-between w-100">
+          <div class="d-flex align-center justify-space-between">
+            <v-btn icon @click="previousMonth" density="comfortable">
+              <v-icon>mdi-chevron-left</v-icon>
+            </v-btn>
+            <v-toolbar-title class="text-center calendar-title">
+              {{ currentMonthTitle }}
+            </v-toolbar-title>
+            <v-btn icon @click="nextMonth" density="comfortable">
+              <v-icon>mdi-chevron-right</v-icon>
+            </v-btn>
+          </div>
 
-          <v-toolbar-title class="text-center calendar-title">
-            {{ currentMonthTitle }}
-          </v-toolbar-title>
-
-          <v-btn icon @click="nextMonth" density="comfortable">
-            <v-icon>mdi-chevron-right</v-icon>
-          </v-btn>
+          <div>
+            <div class="d-flex flex-wrap align-center gap-2">
+              <v-chip
+                v-for="type in ['SETTING', 'REMOVAL', 'EVENT', 'CLOSED']"
+                :key="type"
+                :color="getEventColor({ type })"
+                size="small"
+                label
+                class="mr-1"
+              >
+                {{ getEventTypeLabel(type) }}
+              </v-chip>
+              <v-btn
+                prepend-icon="mdi-plus"
+                @click="openAddDialog"
+                :loading="loading"
+                size="medium"
+                density="comfortable"
+                class="flex-grow-0 pa-2 text-capitalize"
+              >
+              </v-btn>
+              <v-btn
+                prepend-icon="mdi-repeat"
+                @click="openRepeatDialog"
+                :loading="loading"
+                size="medium"
+                density="comfortable"
+                class="flex-grow-0 pa-2 text-capitalize"
+              >
+              </v-btn>
+            </div>
+          </div>
         </div>
       </v-toolbar>
-
-      <!-- 필터 및 버튼 영역 - 항상 표시 -->
-      <div
-        class="filter-section px-2 py-2 d-flex flex-wrap align-center justify-space-between"
-      >
-        <!-- 데스크탑에서는 한 줄로, 모바일에서는 여러 줄로 표시 -->
-        <div class="d-flex flex-wrap align-center gap-2">
-          <v-chip
-            v-for="type in ['SETTING', 'REMOVAL', 'EVENT', 'CLOSED']"
-            :key="type"
-            :color="getEventColor({ type })"
-            size="small"
-            label
-            class="ma-1"
-          >
-            {{ getEventTypeLabel(type) }}
-          </v-chip>
-        </div>
-
-        <div class="d-flex flex-wrap align-center gap-2">
-          <v-btn
-            prepend-icon="mdi-plus"
-            @click="openAddDialog"
-            :loading="loading"
-            size="medium"
-            density="comfortable"
-            class="flex-grow-0 px-2 py-1 mr-2 text-capitalize"
-            variant="tonal"
-          >
-            일정 추가
-          </v-btn>
-          <v-btn
-            prepend-icon="mdi-repeat"
-            @click="openRepeatDialog"
-            :loading="loading"
-            size="medium"
-            density="comfortable"
-            class="flex-grow-0 px-2 py-1 text-capitalize"
-            variant="tonal"
-          >
-            반복 일정
-          </v-btn>
-        </div>
-      </div>
-
       <!-- 달력 그리드 -->
       <v-card-text class="px-1 px-sm-2 py-1">
         <div class="calendar-grid">
@@ -99,20 +87,31 @@
                 <div class="date-number">
                   {{ new Date(day.date).getDate() }}
                 </div>
-
-                <!-- 모바일에서는 이벤트 개수만 표시 -->
+                <!-- 모바일에서 이벤트 미리보기 표시 방식 변경 부분 -->
                 <div
                   v-if="day.events.length > 0"
                   class="mobile-event-indicator"
                 >
-                  <v-badge
-                    :content="day.events.length"
-                    color="primary"
-                    location="bottom end"
-                    offset-x="5"
-                    offset-y="10"
-                    v-if="isMobile"
-                  ></v-badge>
+                  <!-- 모바일에서는 전체 대화상자 대신 이벤트 요약 표시 -->
+                  <div v-if="isMobile" class="mobile-events-preview">
+                    <div
+                      v-for="(event, index) in day.events.slice(0, 2)"
+                      :key="event.id"
+                      :class="{
+                        'mb-1': index < Math.min(day.events.length, 2) - 1,
+                      }"
+                      class="mobile-event-item"
+                      :style="{ backgroundColor: getEventColorHex(event) }"
+                      @click.stop="showEvent(event)"
+                    >
+                      <div class="mobile-event-text">
+                        <span class="wall-name">{{ event.wall_name }}</span>
+                      </div>
+                    </div>
+                    <div v-if="day.events.length > 2" class="more-events">
+                      +{{ day.events.length - 2 }}
+                    </div>
+                  </div>
 
                   <!-- 데스크탑에서는 기존 이벤트 표시 방식 사용 -->
                   <div v-else class="events-container">
@@ -155,7 +154,6 @@
           <v-toolbar-title
             >{{ formatDate(selectedDay.date) }} 일정</v-toolbar-title
           >
-          <v-spacer></v-spacer>
           <v-btn icon @click="openAddDialog({ date: selectedDay.date }, false)">
             <v-icon>mdi-plus</v-icon>
           </v-btn>
@@ -478,6 +476,21 @@ function getEventIcon(type) {
       return "mdi-calendar-blank";
     default:
       return "mdi-calendar";
+  }
+}
+
+function getEventColorHex(event) {
+  switch (event.type) {
+    case "SETTING":
+      return "#4caf50"; // success 컬러의 hex 값
+    case "REMOVAL":
+      return "#f44336"; // error 컬러의 hex 값
+    case "EVENT":
+      return "#2196f3"; // info 컬러의 hex 값
+    case "CLOSED":
+      return "#9e9e9e"; // grey 컬러의 hex 값
+    default:
+      return "#1976d2"; // primary 컬러의 hex 값
   }
 }
 
@@ -852,5 +865,61 @@ onMounted(() => {
 
 .events-container::-webkit-scrollbar-thumb:hover {
   background: rgba(var(--v-theme-on-surface), 0.6);
+}
+
+/* 모바일 이벤트 미리보기 스타일 */
+.mobile-events-preview {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-event-item {
+  padding: 2px 4px;
+  border-radius: 4px;
+  min-height: 18px;
+  width: 100%;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-event-text {
+  font-size: 0.65rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: white;
+  text-align: center;
+}
+
+.wall-name {
+  font-weight: 500;
+}
+
+.more-events {
+  text-align: center;
+  font-size: 0.65rem;
+  margin-top: 2px;
+  color: #666;
+}
+@media (max-width: 600px) {
+  .calendar-row {
+    min-height: 70px;
+  }
+
+  .mobile-event-item {
+    margin: 1px 0;
+  }
+
+  /* 날짜 숫자 위치 조정 */
+  .date-number {
+    margin-bottom: 2px;
+    font-size: 0.7rem;
+  }
+
+  .today .date-number {
+    width: 18px;
+    height: 18px;
+  }
 }
 </style>
