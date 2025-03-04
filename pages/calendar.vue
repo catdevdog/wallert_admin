@@ -28,6 +28,104 @@
               >
                 {{ getEventTypeLabel(type) }}
               </v-chip>
+
+              <!-- 모바일용 암장 필터 드롭다운 메뉴 추가 -->
+              <div v-if="isMobile" class="d-flex align-center ms-auto me-2">
+                <v-menu
+                  v-model="showGymFilter"
+                  :close-on-content-click="false"
+                  location="bottom"
+                >
+                  <template v-slot:activator="{ props }">
+                    <v-badge
+                      :content="
+                        selectedGyms.length > 0 ? selectedGyms.length : ''
+                      "
+                      color="primary"
+                      :model-value="selectedGyms.length > 0"
+                      dot
+                    >
+                      <v-btn
+                        v-bind="props"
+                        icon
+                        size="small"
+                        :color="selectedGyms.length > 0 ? 'primary' : ''"
+                      >
+                        <v-icon>mdi-filter-variant</v-icon>
+                      </v-btn>
+                    </v-badge>
+                  </template>
+
+                  <v-card min-width="250" max-width="300">
+                    <v-card-title class="text-subtitle-1 d-flex align-center">
+                      암장 필터
+                      <v-spacer></v-spacer>
+                      <v-btn
+                        v-if="selectedGyms.length > 0"
+                        variant="text"
+                        size="small"
+                        color="primary"
+                        @click="clearGymFilter"
+                        density="comfortable"
+                      >
+                        초기화
+                      </v-btn>
+                    </v-card-title>
+
+                    <v-divider></v-divider>
+
+                    <v-card-text class="pt-2 pb-2">
+                      <p
+                        v-if="uniqueGyms.length === 0"
+                        class="text-center text-caption pa-2"
+                      >
+                        로딩 중...
+                      </p>
+                      <v-list v-else density="compact" bg-color="transparent">
+                        <v-list-item
+                          v-if="selectedGyms.length === 0"
+                          class="text-caption text-grey"
+                        >
+                          <v-icon size="small" color="grey" class="mr-2"
+                            >mdi-information</v-icon
+                          >
+                          암장을 선택하면 일정이 표시됩니다
+                        </v-list-item>
+                        <v-list-item
+                          v-for="gym in uniqueGyms"
+                          :key="gym"
+                          class="px-2"
+                        >
+                          <template v-slot:prepend>
+                            <v-checkbox
+                              v-model="selectedGyms"
+                              :value="gym"
+                              hide-details
+                              color="primary"
+                              density="compact"
+                            ></v-checkbox>
+                          </template>
+                          <v-list-item-title class="text-subtitle-2">{{
+                            gym
+                          }}</v-list-item-title>
+                        </v-list-item>
+                      </v-list>
+                    </v-card-text>
+
+                    <v-card-actions>
+                      <v-spacer></v-spacer>
+                      <v-btn
+                        color="primary"
+                        variant="tonal"
+                        @click="showGymFilter = false"
+                      >
+                        확인
+                      </v-btn>
+                    </v-card-actions>
+                  </v-card>
+                </v-menu>
+              </div>
+
               <v-btn
                 prepend-icon="mdi-plus"
                 @click="openAddDialog"
@@ -88,7 +186,7 @@
                   {{ new Date(day.date).getDate() }}
                 </div>
 
-                <!-- 모바일에서 이벤트 미리보기 표시 방식 변경 부분 -->
+                <!-- 일정 표시 영역 -->
                 <div
                   v-if="day.events.length > 0"
                   class="mobile-event-indicator"
@@ -96,10 +194,14 @@
                   <!-- 모바일에서는 전체 대화상자 대신 이벤트 요약 표시 -->
                   <div v-if="isMobile" class="mobile-events-preview">
                     <div
-                      v-for="(event, index) in day.events.slice(0, 2)"
+                      v-for="(event, index) in getFilteredEvents(
+                        day.events
+                      ).slice(0, 2)"
                       :key="event.id"
                       :class="{
-                        'mb-1': index < Math.min(day.events.length, 2) - 1,
+                        'mb-1':
+                          index <
+                          Math.min(getFilteredEvents(day.events).length, 2) - 1,
                       }"
                       class="mobile-event-item"
                       :style="{ backgroundColor: getEventColorHex(event) }"
@@ -109,8 +211,22 @@
                         <span class="wall-name">{{ event.wall_name }}</span>
                       </div>
                     </div>
-                    <div v-if="day.events.length > 2" class="more-events">
-                      +{{ day.events.length - 2 }}
+                    <div
+                      v-if="getFilteredEvents(day.events).length > 2"
+                      class="more-events"
+                    >
+                      +{{ getFilteredEvents(day.events).length - 2 }}
+                    </div>
+                    <div
+                      v-if="
+                        day.events.length > 0 &&
+                        getFilteredEvents(day.events).length === 0
+                      "
+                      class="no-filter-selected"
+                    >
+                      <v-icon size="small" color="grey"
+                        >mdi-filter-variant</v-icon
+                      >
                     </div>
                   </div>
 
@@ -126,10 +242,7 @@
                       @click.stop="showEvent(event)"
                     >
                       <div class="event-content">
-                        <p>
-                          {{ event.name_kr }}
-                        </p>
-                        <p class="text-caption">{{ event.wall_name }}</p>
+                        <p>{{ event.brand_name }} - {{ event.wall_name }}</p>
                       </div>
                     </v-chip>
                   </div>
@@ -155,38 +268,105 @@
           <v-toolbar-title
             >{{ formatDate(selectedDay.date) }} 일정</v-toolbar-title
           >
+          <v-badge
+            :content="selectedGyms.length > 0 ? selectedGyms.length : ''"
+            color="primary"
+            :model-value="selectedGyms.length > 0"
+            dot
+          >
+            <v-btn icon @click="showGymFilter = true">
+              <v-icon>mdi-filter-variant</v-icon>
+            </v-btn>
+          </v-badge>
           <v-btn icon @click="openAddDialog({ date: selectedDay.date }, false)">
             <v-icon>mdi-plus</v-icon>
           </v-btn>
         </v-toolbar>
 
         <v-card-text>
-          <v-list lines="two">
-            <v-list-item
-              v-for="event in selectedDay.events"
-              :key="event.id"
-              :title="event.name_kr"
-              :subtitle="event.wall_name"
-              @click="showEvent(event)"
+          <!-- 필터 선택 안내 메시지 -->
+          <v-alert
+            v-if="selectedGyms.length === 0 && selectedDay.events.length > 0"
+            type="info"
+            variant="tonal"
+            border="start"
+            class="mb-3"
+            density="comfortable"
+          >
+            <div class="d-flex align-center">
+              <span>암장 필터를 선택하면 일정이 표시됩니다</span>
+              <v-spacer></v-spacer>
+              <v-btn
+                color="primary"
+                variant="tonal"
+                size="small"
+                @click="showGymFilter = true"
+              >
+                필터 선택
+              </v-btn>
+            </div>
+          </v-alert>
+
+          <!-- 선택된 필터 정보 표시 -->
+          <v-chip-group v-if="selectedGyms.length > 0" class="mb-3">
+            <v-chip
+              v-for="gym in selectedGyms"
+              :key="gym"
+              closable
+              @click:close="removeGym(gym)"
+              color="primary"
+              variant="outlined"
+              size="small"
             >
-              <template v-slot:prepend>
-                <v-avatar :color="getEventColor(event)" size="small">
-                  <v-icon color="white" size="small">
-                    {{ getEventIcon(event.type) }}
-                  </v-icon>
-                </v-avatar>
+              {{ gym }}
+            </v-chip>
+          </v-chip-group>
+
+          <!-- 필터링된 이벤트 목록 -->
+          <v-list lines="two">
+            <template v-if="selectedDay.events.length > 0">
+              <template v-if="selectedGyms.length > 0">
+                <v-list-item
+                  v-for="event in getFilteredEvents(selectedDay.events)"
+                  :key="event.id"
+                  :title="event.name_kr"
+                  :subtitle="event.wall_name"
+                  @click="showEvent(event)"
+                >
+                  <template v-slot:prepend>
+                    <v-avatar :color="getEventColor(event)" size="small">
+                      <v-icon color="white" size="small">
+                        {{ getEventIcon(event.type) }}
+                      </v-icon>
+                    </v-avatar>
+                  </template>
+
+                  <template v-slot:append>
+                    <v-chip :color="getEventColor(event)" size="x-small" label>
+                      {{ getEventTypeLabel(event.type) }}
+                    </v-chip>
+                  </template>
+                </v-list-item>
+
+                <v-list-item
+                  v-if="getFilteredEvents(selectedDay.events).length === 0"
+                >
+                  <div class="text-center py-4 text-body-2">
+                    선택한 암장의 일정이 없습니다
+                  </div>
+                </v-list-item>
               </template>
 
-              <template v-slot:append>
-                <v-chip :color="getEventColor(event)" size="x-small" label>
-                  {{ getEventTypeLabel(event.type) }}
-                </v-chip>
-              </template>
-            </v-list-item>
+              <v-list-item v-else>
+                <div class="text-center py-4 text-body-2">
+                  표시할 암장을 선택해주세요
+                </div>
+              </v-list-item>
+            </template>
 
-            <v-list-item v-if="selectedDay.events.length === 0">
+            <v-list-item v-else>
               <div class="text-center py-4 text-body-2">
-                등록된 일정이 없습니다.
+                등록된 일정이 없습니다
               </div>
             </v-list-item>
           </v-list>
@@ -294,7 +474,6 @@
     </v-snackbar>
   </v-container>
 </template>
-
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
 import { useDisplay } from "vuetify";
@@ -318,11 +497,26 @@ const brands = ref([]);
 const editMode = ref(false);
 const addDate = ref(null);
 
+// 암장 필터 관련 state 추가
+const showGymFilter = ref(false);
+const selectedGyms = ref([]);
+
 // 스낵바 상태
 const snackbar = ref({
   show: false,
   text: "",
   color: "success",
+});
+
+// 전체 일정에서 고유한 암장 목록 추출
+const uniqueGyms = computed(() => {
+  if (!schedules.value || schedules.value.length === 0) return [];
+
+  // 중복 제거된 암장 이름 배열 반환
+  const gyms = [
+    ...new Set(schedules.value.map((schedule) => schedule.brand_name)),
+  ];
+  return gyms.sort(); // 알파벳 순으로 정렬
 });
 
 // 시간대 관련 유틸리티 함수
@@ -435,6 +629,29 @@ function getEventsForDate(date) {
   });
 }
 
+// 필터링된 이벤트만 반환하는 함수
+function getFilteredEvents(events) {
+  if (!events || events.length === 0) return [];
+
+  // 선택된 암장이 없으면 모든 이벤트를 숨김
+  if (selectedGyms.value.length === 0) return [];
+
+  // 선택된 암장의 이벤트만 필터링
+  return events.filter((event) =>
+    selectedGyms.value.includes(event.brand_name)
+  );
+}
+
+// 필터 초기화 함수
+function clearGymFilter() {
+  selectedGyms.value = [];
+}
+
+// 특정 암장 필터 제거 함수
+function removeGym(gym) {
+  selectedGyms.value = selectedGyms.value.filter((g) => g !== gym);
+}
+
 function getEventColor(event) {
   switch (event.type) {
     case "SETTING":
@@ -527,6 +744,12 @@ function nextMonth() {
 // 셀 클릭 처리 - 모바일과 데스크탑 구분
 function cellClick(day) {
   if (isMobile.value) {
+    // 모바일에서 필터가 선택되지 않았고 이벤트가 있으면 필터 메뉴를 열도록 유도
+    if (selectedGyms.value.length === 0 && day.events.length > 0) {
+      showGymFilter.value = true;
+      return;
+    }
+
     selectedDay.value = day;
     dayEventsDialog.value = true;
   } else if (day.events.length === 0) {
@@ -726,7 +949,6 @@ onMounted(() => {
   Promise.all([fetchSchedules(), fetchBrands()]);
 });
 </script>
-
 <style scoped>
 .calendar-title {
   flex: 0 0 auto;
@@ -873,6 +1095,7 @@ onMounted(() => {
   width: 100%;
   display: flex;
   flex-direction: column;
+  min-height: 20px;
 }
 
 .mobile-event-item {
@@ -902,5 +1125,45 @@ onMounted(() => {
   font-size: 0.65rem;
   margin-top: 2px;
   color: #666;
+}
+
+.no-filter-selected {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 18px;
+}
+
+/* 반응형 조정을 위한 미디어 쿼리 */
+@media (max-width: 600px) {
+  .calendar-title {
+    font-size: 0.875rem;
+  }
+
+  .calendar-row {
+    min-height: 60px;
+  }
+
+  .calendar-header-cell {
+    padding: 4px 2px;
+    font-size: 0.75rem;
+  }
+
+  .calendar-cell {
+    padding: 2px;
+  }
+
+  .date-number {
+    font-size: 0.75rem;
+  }
+
+  .today .date-number {
+    width: 20px;
+    height: 20px;
+  }
+
+  .mobile-event-item {
+    margin: 1px 0;
+  }
 }
 </style>
