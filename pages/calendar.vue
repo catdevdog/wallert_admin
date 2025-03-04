@@ -87,6 +87,7 @@
                 <div class="date-number">
                   {{ new Date(day.date).getDate() }}
                 </div>
+
                 <!-- 모바일에서 이벤트 미리보기 표시 방식 변경 부분 -->
                 <div
                   v-if="day.events.length > 0"
@@ -901,25 +902,5 @@ onMounted(() => {
   font-size: 0.65rem;
   margin-top: 2px;
   color: #666;
-}
-@media (max-width: 600px) {
-  .calendar-row {
-    min-height: 70px;
-  }
-
-  .mobile-event-item {
-    margin: 1px 0;
-  }
-
-  /* 날짜 숫자 위치 조정 */
-  .date-number {
-    margin-bottom: 2px;
-    font-size: 0.7rem;
-  }
-
-  .today .date-number {
-    width: 18px;
-    height: 18px;
-  }
 }
 </style>
