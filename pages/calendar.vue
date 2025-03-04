@@ -1,6 +1,6 @@
 <template>
   <v-container fluid class="pa-0 pa-sm-2">
-    <v-card>
+    <v-card class="calendar-wrap">
       <!-- 캘린더 헤더 - 고정 표시 -->
       <v-toolbar density="compact">
         <div class="d-flex align-center justify-space-between w-100">
@@ -241,17 +241,17 @@
           </div>
         </div>
       </v-card-text>
+      <v-chip
+        v-for="type in ['SETTING', 'REMOVAL', 'EVENT', 'CLOSED']"
+        :key="type"
+        :color="getEventColor({ type })"
+        size="small"
+        label
+        class="ma-1"
+      >
+        {{ getEventTypeLabel(type) }}
+      </v-chip>
     </v-card>
-    <v-chip
-      v-for="type in ['SETTING', 'REMOVAL', 'EVENT', 'CLOSED']"
-      :key="type"
-      :color="getEventColor({ type })"
-      size="small"
-      label
-      class="ma-1"
-    >
-      {{ getEventTypeLabel(type) }}
-    </v-chip>
     <!-- 모바일용 날짜별 이벤트 목록 다이얼로그 -->
     <v-dialog
       v-model="dayEventsDialog"
@@ -1161,6 +1161,13 @@ onMounted(() => {
 
   .mobile-event-item {
     margin: 1px 0;
+  }
+}
+
+@media (min-width: 1200px) {
+  .calendar-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
   }
 }
 </style>
