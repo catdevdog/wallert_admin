@@ -18,17 +18,6 @@
 
           <div>
             <div class="d-flex flex-wrap align-center gap-2">
-              <v-chip
-                v-for="type in ['SETTING', 'REMOVAL', 'EVENT', 'CLOSED']"
-                :key="type"
-                :color="getEventColor({ type })"
-                size="small"
-                label
-                class="mr-1"
-              >
-                {{ getEventTypeLabel(type) }}
-              </v-chip>
-
               <!-- 모바일용 암장 필터 드롭다운 메뉴 추가 -->
               <div v-if="isMobile" class="d-flex align-center ms-auto me-2">
                 <v-menu
@@ -105,9 +94,9 @@
                               density="compact"
                             ></v-checkbox>
                           </template>
-                          <v-list-item-title class="text-subtitle-2">{{
-                            gym
-                          }}</v-list-item-title>
+                          <v-list-item-title class="text-subtitle-2">
+                            {{ gym }}
+                          </v-list-item-title>
                         </v-list-item>
                       </v-list>
                     </v-card-text>
@@ -253,7 +242,16 @@
         </div>
       </v-card-text>
     </v-card>
-
+    <v-chip
+      v-for="type in ['SETTING', 'REMOVAL', 'EVENT', 'CLOSED']"
+      :key="type"
+      :color="getEventColor({ type })"
+      size="small"
+      label
+      class="ma-1"
+    >
+      {{ getEventTypeLabel(type) }}
+    </v-chip>
     <!-- 모바일용 날짜별 이벤트 목록 다이얼로그 -->
     <v-dialog
       v-model="dayEventsDialog"
@@ -1042,7 +1040,6 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 20px;
 }
 
 .events-container {
