@@ -1,48 +1,69 @@
 <template>
-  <v-container fluid>
+  <v-container fluid class="pa-0 pa-sm-2">
     <v-card>
-      <v-toolbar>
-        <v-btn icon @click="previousMonth">
-          <v-icon>mdi-chevron-left</v-icon>
-        </v-btn>
+      <!-- 캘린더 헤더 - 고정 표시 -->
+      <v-toolbar density="compact">
+        <div class="d-flex align-center justify-center w-100">
+          <v-btn icon @click="previousMonth" density="comfortable">
+            <v-icon>mdi-chevron-left</v-icon>
+          </v-btn>
 
-        <v-toolbar-title class="text-center calendar-title">
-          {{ currentMonthTitle }}
-        </v-toolbar-title>
+          <v-toolbar-title class="text-center calendar-title">
+            {{ currentMonthTitle }}
+          </v-toolbar-title>
 
-        <v-btn icon @click="nextMonth">
-          <v-icon>mdi-chevron-right</v-icon>
-        </v-btn>
-
-        <v-spacer></v-spacer>
-        <v-chip
-          v-for="type in ['SETTING', 'REMOVAL', 'EVENT', 'CLOSED']"
-          :key="type"
-          :color="getEventColor({ type })"
-          size="small"
-          label
-          class="mr-2"
-        >
-          {{ getEventTypeLabel(type) }}
-        </v-chip>
-        <v-btn
-          prepend-icon="mdi-plus"
-          @click="openAddDialog"
-          :loading="loading"
-        >
-          일정 추가
-        </v-btn>
-        <v-btn
-          prepend-icon="mdi-repeat"
-          @click="openRepeatDialog"
-          :loading="loading"
-        >
-          반복 일정
-        </v-btn>
+          <v-btn icon @click="nextMonth" density="comfortable">
+            <v-icon>mdi-chevron-right</v-icon>
+          </v-btn>
+        </div>
       </v-toolbar>
 
+      <!-- 필터 및 버튼 영역 - 항상 표시 -->
+      <div
+        class="filter-section px-2 py-2 d-flex flex-wrap align-center justify-space-between"
+      >
+        <!-- 데스크탑에서는 한 줄로, 모바일에서는 여러 줄로 표시 -->
+        <div class="d-flex flex-wrap align-center gap-2">
+          <v-chip
+            v-for="type in ['SETTING', 'REMOVAL', 'EVENT', 'CLOSED']"
+            :key="type"
+            :color="getEventColor({ type })"
+            size="small"
+            label
+            class="ma-1"
+          >
+            {{ getEventTypeLabel(type) }}
+          </v-chip>
+        </div>
+
+        <div class="d-flex flex-wrap align-center gap-2">
+          <v-btn
+            prepend-icon="mdi-plus"
+            @click="openAddDialog"
+            :loading="loading"
+            size="medium"
+            density="comfortable"
+            class="flex-grow-0 px-2 py-1 mr-2 text-capitalize"
+            variant="tonal"
+          >
+            일정 추가
+          </v-btn>
+          <v-btn
+            prepend-icon="mdi-repeat"
+            @click="openRepeatDialog"
+            :loading="loading"
+            size="medium"
+            density="comfortable"
+            class="flex-grow-0 px-2 py-1 text-capitalize"
+            variant="tonal"
+          >
+            반복 일정
+          </v-btn>
+        </div>
+      </div>
+
       <!-- 달력 그리드 -->
-      <v-card-text>
+      <v-card-text class="px-1 px-sm-2 py-1">
         <div class="calendar-grid">
           <!-- 요일 헤더 -->
           <div class="calendar-header">
@@ -71,33 +92,47 @@
                   'outside-month': !day.isCurrentMonth,
                   today: day.isToday,
                   weekend: day.dayOfWeek === 0 || day.dayOfWeek === 6,
+                  'has-events': day.events.length > 0,
                 }"
+                @click="cellClick(day)"
               >
                 <div class="date-number">
-                  <v-btn
-                    variant="text"
-                    @click="openAddDialog({ date: day.date }, false)"
-                  >
-                    {{ new Date(day.date).getDate() }}
-                  </v-btn>
+                  {{ new Date(day.date).getDate() }}
                 </div>
-                <div class="events-container">
-                  <v-chip
-                    v-for="event in day.events"
-                    :key="event.id"
-                    :color="getEventColor(event)"
-                    size="small"
-                    class="mb-1 event-chip px-0 py-1"
-                    label
-                    @click="showEvent(event)"
-                  >
-                    <div class="event-content">
-                      <p>
-                        {{ event.name_kr }}
-                      </p>
-                      <p class="font-weight-bold">- {{ event.wall_name }}</p>
-                    </div>
-                  </v-chip>
+
+                <!-- 모바일에서는 이벤트 개수만 표시 -->
+                <div
+                  v-if="day.events.length > 0"
+                  class="mobile-event-indicator"
+                >
+                  <v-badge
+                    :content="day.events.length"
+                    color="primary"
+                    location="bottom end"
+                    offset-x="5"
+                    offset-y="10"
+                    v-if="isMobile"
+                  ></v-badge>
+
+                  <!-- 데스크탑에서는 기존 이벤트 표시 방식 사용 -->
+                  <div v-else class="events-container">
+                    <v-chip
+                      v-for="event in day.events"
+                      :key="event.id"
+                      :color="getEventColor(event)"
+                      size="small"
+                      class="mb-1 event-chip px-0 py-1"
+                      label
+                      @click.stop="showEvent(event)"
+                    >
+                      <div class="event-content">
+                        <p>
+                          {{ event.name_kr }}
+                        </p>
+                        <p class="text-caption">{{ event.wall_name }}</p>
+                      </div>
+                    </v-chip>
+                  </div>
                 </div>
               </div>
             </div>
@@ -106,13 +141,75 @@
       </v-card-text>
     </v-card>
 
-    <!-- 일정 상세 다이얼로그 -->
-    <v-dialog v-model="eventDialog" max-width="400">
+    <!-- 모바일용 날짜별 이벤트 목록 다이얼로그 -->
+    <v-dialog
+      v-model="dayEventsDialog"
+      fullscreen
+      transition="dialog-bottom-transition"
+    >
+      <v-card v-if="selectedDay">
+        <v-toolbar>
+          <v-btn icon @click="dayEventsDialog = false">
+            <v-icon>mdi-arrow-left</v-icon>
+          </v-btn>
+          <v-toolbar-title
+            >{{ formatDate(selectedDay.date) }} 일정</v-toolbar-title
+          >
+          <v-spacer></v-spacer>
+          <v-btn icon @click="openAddDialog({ date: selectedDay.date }, false)">
+            <v-icon>mdi-plus</v-icon>
+          </v-btn>
+        </v-toolbar>
+
+        <v-card-text>
+          <v-list lines="two">
+            <v-list-item
+              v-for="event in selectedDay.events"
+              :key="event.id"
+              :title="event.name_kr"
+              :subtitle="event.wall_name"
+              @click="showEvent(event)"
+            >
+              <template v-slot:prepend>
+                <v-avatar :color="getEventColor(event)" size="small">
+                  <v-icon color="white" size="small">
+                    {{ getEventIcon(event.type) }}
+                  </v-icon>
+                </v-avatar>
+              </template>
+
+              <template v-slot:append>
+                <v-chip :color="getEventColor(event)" size="x-small" label>
+                  {{ getEventTypeLabel(event.type) }}
+                </v-chip>
+              </template>
+            </v-list-item>
+
+            <v-list-item v-if="selectedDay.events.length === 0">
+              <div class="text-center py-4 text-body-2">
+                등록된 일정이 없습니다.
+              </div>
+            </v-list-item>
+          </v-list>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
+    <!-- 일정 상세 다이얼로그 - 모바일 대응 -->
+    <v-dialog
+      v-model="eventDialog"
+      :fullscreen="isMobile"
+      max-width="400"
+      transition="dialog-bottom-transition"
+    >
       <v-card v-if="selectedEvent">
         <v-toolbar :color="getEventColor(selectedEvent)">
+          <v-btn v-if="isMobile" icon @click="eventDialog = false" class="mr-2">
+            <v-icon>mdi-arrow-left</v-icon>
+          </v-btn>
           <v-toolbar-title>{{ selectedEvent.name_kr }}</v-toolbar-title>
           <template #append>
-            <v-btn icon @click="eventDialog = false">
+            <v-btn v-if="!isMobile" icon @click="eventDialog = false">
               <v-icon>mdi-close</v-icon>
             </v-btn>
           </template>
@@ -183,6 +280,7 @@
       :edit-data="selectedEvent"
       :add-date="addDate"
       :loading="loading"
+      :fullscreen="isMobile"
       @save="handleSave"
     />
 
@@ -199,16 +297,23 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
+import { useDisplay } from "vuetify";
 import ScheduleForm from "~/components/ScheduleForm.vue";
 import ScheduleRepeatForm from "@/components/ScheduleRepeatForm.vue";
+
+// Vuetify 반응형 디스플레이 사용
+const { mobile, xs, width } = useDisplay();
+const isMobile = computed(() => mobile.value || xs.value);
 
 // 상태 관리
 const loading = ref(false);
 const currentDate = ref(new Date());
 const eventDialog = ref(false);
 const formDialog = ref(false);
+const dayEventsDialog = ref(false); // 모바일용 날짜별 이벤트 목록
 const selectedEvent = ref(null);
+const selectedDay = ref(null); // 선택된 날짜 정보
 const schedules = ref([]);
 const brands = ref([]);
 const editMode = ref(false);
@@ -276,9 +381,6 @@ const calendarDays = computed(() => {
   const currentMonthDays = [];
   for (let i = 1; i <= lastDay.getDate(); i++) {
     const date = new Date(year, month, i);
-
-    if (isSameDate(date, new Date())) console.log(date);
-
     currentMonthDays.push({
       date: getLocalISOString(date),
       isCurrentMonth: true,
@@ -364,6 +466,21 @@ function getEventTypeLabel(type) {
   }
 }
 
+function getEventIcon(type) {
+  switch (type) {
+    case "SETTING":
+      return "mdi-calendar-plus";
+    case "REMOVAL":
+      return "mdi-calendar-remove";
+    case "EVENT":
+      return "mdi-calendar-star";
+    case "CLOSED":
+      return "mdi-calendar-blank";
+    default:
+      return "mdi-calendar";
+  }
+}
+
 function formatDate(dateStr) {
   const koreanDate = getKoreanDate(new Date(dateStr));
   return koreanDate.toLocaleDateString("ko-KR", {
@@ -393,24 +510,44 @@ function nextMonth() {
   );
 }
 
+// 셀 클릭 처리 - 모바일과 데스크탑 구분
+function cellClick(day) {
+  if (isMobile.value) {
+    selectedDay.value = day;
+    dayEventsDialog.value = true;
+  } else if (day.events.length === 0) {
+    openAddDialog({ date: day.date }, false);
+  }
+}
+
 // 이벤트 핸들러들
 function showEvent(event) {
   selectedEvent.value = event;
   eventDialog.value = true;
+  // 모바일에서 날짜별 이벤트 목록 다이얼로그 닫기
+  if (isMobile.value) {
+    dayEventsDialog.value = false;
+  }
 }
 
 function openAddDialog(date = null, edit = false) {
   selectedEvent.value = null;
   editMode.value = edit;
 
-  if (date.date) {
+  if (date && date.date) {
     addDate.value = date.date;
   }
 
   formDialog.value = true;
+
+  // 모바일에서 날짜별 이벤트 목록 다이얼로그 닫기
+  if (isMobile.value && dayEventsDialog.value) {
+    dayEventsDialog.value = false;
+  }
 }
 
-function editEvent() {
+function editEvent(event) {
+  selectedEvent.value = event;
   editMode.value = true;
   eventDialog.value = false;
   formDialog.value = true;
@@ -459,6 +596,11 @@ async function handleSave(scheduleData) {
 
     await fetchSchedules();
     formDialog.value = false;
+
+    // 모바일에서 날짜별 이벤트 목록 다이얼로그 갱신
+    if (isMobile.value && selectedDay.value && dayEventsDialog.value) {
+      selectedDay.value.events = getEventsForDate(selectedDay.value.date);
+    }
   } catch (error) {
     showSnackbar("일정 저장에 실패했습니다.", "error");
   } finally {
@@ -500,10 +642,11 @@ function showSnackbar(text, color = "success") {
     text,
     color,
   };
-} // 상태 추가
+}
+
+// 반복 일정 관련
 const repeatFormDialog = ref(false);
 
-// 함수 추가
 function openRepeatDialog() {
   repeatFormDialog.value = true;
 }
@@ -573,6 +716,7 @@ onMounted(() => {
 <style scoped>
 .calendar-title {
   flex: 0 0 auto;
+  font-size: 1rem;
 }
 
 .calendar-grid {
@@ -587,10 +731,11 @@ onMounted(() => {
 }
 
 .calendar-header-cell {
-  padding: 12px;
+  padding: 8px 4px;
   text-align: center;
   font-weight: bold;
   color: rgb(var(--v-theme-on-surface));
+  font-size: 0.85rem;
 }
 
 .calendar-body {
@@ -602,15 +747,21 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  min-height: 120px;
+  min-height: 80px;
 }
 
 .calendar-cell {
-  padding: 8px;
+  padding: 4px;
   border-right: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   position: relative;
   background: rgb(var(--v-theme-surface));
   color: rgb(var(--v-theme-on-surface));
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.calendar-cell:hover {
+  background-color: rgba(var(--v-theme-primary), 0.05);
 }
 
 .calendar-cell:last-child {
@@ -618,20 +769,14 @@ onMounted(() => {
 }
 
 .date-number {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  text-align: center;
+  margin-bottom: 4px;
   font-size: 0.875rem;
   color: rgb(var(--v-theme-on-surface));
 }
 
 .outside-month {
-  background: rgb(var(--v-theme-on-surface-variant), 0.5);
+  background: rgb(var(--v-theme-surface-variant), 0.5);
   .date-number {
     color: rgba(var(--v-theme-on-surface), 0.38);
   }
@@ -641,21 +786,34 @@ onMounted(() => {
   background: rgb(var(--v-theme-primary));
   color: rgb(var(--v-theme-on-primary));
   border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 4px;
 }
 
 .weekend {
-  /* background: rgb(var(--v-theme-surface-variant)); */
+  color: #f03e3e;
 }
 
-.weekend.outside-month {
-  /* background: rgba(var(--v-theme-surface), 0.3); */
+.has-events {
+  position: relative;
+}
+
+.mobile-event-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
 }
 
 .events-container {
-  margin-top: 28px;
+  margin-top: 4px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   max-height: calc(100% - 32px);
   overflow-y: auto;
 }
@@ -665,6 +823,7 @@ onMounted(() => {
   cursor: pointer;
   color: rgb(var(--v-theme-on-surface-variant));
   height: auto;
+  font-size: 0.7rem;
 }
 
 .event-content {
@@ -673,14 +832,13 @@ onMounted(() => {
   word-break: break-word;
   line-height: 1.2;
   display: flex;
-  gap: 4px;
-  justify-content: space-between;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 2px;
 }
 
 /* 스크롤바 스타일링 */
 .events-container::-webkit-scrollbar {
-  width: 4px;
+  width: 3px;
 }
 
 .events-container::-webkit-scrollbar-track {
@@ -694,26 +852,5 @@ onMounted(() => {
 
 .events-container::-webkit-scrollbar-thumb:hover {
   background: rgba(var(--v-theme-on-surface), 0.6);
-}
-
-/* 반응형 */
-@media (max-width: 600px) {
-  .calendar-cell {
-    padding: 4px;
-  }
-
-  .date-number {
-    font-size: 0.75rem;
-    width: 20px;
-    height: 20px;
-  }
-
-  .events-container {
-    margin-top: 24px;
-  }
-
-  .event-content {
-    font-size: 0.75rem;
-  }
 }
 </style>
