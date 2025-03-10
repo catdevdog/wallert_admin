@@ -750,7 +750,8 @@ function cellClick(day) {
 
     selectedDay.value = day;
     dayEventsDialog.value = true;
-  } else if (day.events.length === 0) {
+  } else {
+    // 데스크탑에서는 이벤트 추가 다이얼로그 열기
     openAddDialog({ date: day.date }, false);
   }
 }
